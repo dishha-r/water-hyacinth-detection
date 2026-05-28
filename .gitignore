@@ -1,0 +1,7 @@
+yoloenv/
+dataset/
+runs/
+*.pt
+*.zip
+__pycache__/
+*.pyc
