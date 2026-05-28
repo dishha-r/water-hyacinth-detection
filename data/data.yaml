@@ -1,0 +1,6 @@
+path: C:\PROJECT\dataset
+train: images/train
+val: images/val
+
+nc: 1
+names: ['water_hyacinth']
