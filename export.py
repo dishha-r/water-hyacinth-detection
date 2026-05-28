@@ -744,7 +744,9 @@ def export_saved_model(
         check_requirements(f"tensorflow{'' if torch.cuda.is_available() else '-macos' if MACOS else '-cpu'}<=2.15.1")
 
         import tensorflow as tf
-    from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
+    from tensorflow.python.framework.convert_to_constants import (
+        convert_variables_to_constants_v2,
+    )
 
     from models.tf import TFModel
 
@@ -809,7 +811,9 @@ def export_pb(keras_model, file, prefix=colorstr("TensorFlow GraphDef:")):
         For more details, refer to the guide on frozen graphs: https://github.com/leimao/Frozen_Graph_TensorFlow
     """
     import tensorflow as tf
-    from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
+    from tensorflow.python.framework.convert_to_constants import (
+        convert_variables_to_constants_v2,
+    )
 
     LOGGER.info(f"\n{prefix} starting export with tensorflow {tf.__version__}...")
     f = file.with_suffix(".pb")
