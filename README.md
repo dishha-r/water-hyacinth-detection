@@ -1,10 +1,6 @@
 \# Water Hyacinth Detection System 🌿
 
-
-
 A real-time aquatic plant detection system built with YOLOv5 and Flask.
-
-
 
 \## Features
 
@@ -15,8 +11,6 @@ A real-time aquatic plant detection system built with YOLOv5 and Flask.
 \- Web dashboard with detection logs and stats
 
 \- Detects 7 aquatic plant species including Water Hyacinth
-
-
 
 \## Tech Stack
 
@@ -29,8 +23,6 @@ A real-time aquatic plant detection system built with YOLOv5 and Flask.
 \- OpenCV
 
 \- Python 3.13
-
-
 
 \## Setup
 
@@ -46,11 +38,8 @@ A real-time aquatic plant detection system built with YOLOv5 and Flask.
 
 6\. Open: `http://127.0.0.1:5000`
 
-
-
 \## Dataset
 
 Trained on 415 water hyacinth images from Roboflow Universe.
 
 Single class detection: `water\_hyacinth`
-
