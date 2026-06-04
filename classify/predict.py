@@ -47,7 +47,13 @@ from ultralytics.utils.plotting import Annotator
 
 from models.common import DetectMultiBackend
 from utils.augmentations import classify_transforms
-from utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadScreenshots, LoadStreams
+from utils.dataloaders import (
+    IMG_FORMATS,
+    VID_FORMATS,
+    LoadImages,
+    LoadScreenshots,
+    LoadStreams,
+)
 from utils.general import (
     LOGGER,
     Profile,
