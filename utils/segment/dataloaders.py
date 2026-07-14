@@ -10,7 +10,12 @@ import torch
 from torch.utils.data import DataLoader
 
 from ..augmentations import augment_hsv, copy_paste, letterbox
-from ..dataloaders import InfiniteDataLoader, LoadImagesAndLabels, SmartDistributedSampler, seed_worker
+from ..dataloaders import (
+    InfiniteDataLoader,
+    LoadImagesAndLabels,
+    SmartDistributedSampler,
+    seed_worker,
+)
 from ..general import LOGGER, xyn2xy, xywhn2xyxy, xyxy2xywhn
 from ..torch_utils import torch_distributed_zero_first
 from .augmentations import mixup, random_perspective

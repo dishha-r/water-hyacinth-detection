@@ -1,10 +1,8 @@
 import argparse
-import csv
 import os
-import platform
+import pathlib
 import sys
 from pathlib import Path
-import pathlib
 
 # Windows path fix
 temp = pathlib.PosixPath
@@ -18,13 +16,13 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))
 
-from ultralytics.utils.plotting import Annotator, colors, save_one_box
+from ultralytics.utils.plotting import Annotator, colors
+
 from models.common import DetectMultiBackend
 from utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
 from utils.general import (
     LOGGER,
     Profile,
-    check_file,
     check_img_size,
     check_imshow,
     check_requirements,
@@ -34,19 +32,17 @@ from utils.general import (
     non_max_suppression,
     print_args,
     scale_boxes,
-    strip_optimizer,
-    xyxy2xywh,
 )
 from utils.torch_utils import select_device, smart_inference_mode
 
 
 @smart_inference_mode()
 def run(
-    weights=ROOT / "runs/train/exp/weights/best.pt",   # ✅ CORRECT TRAINED MODEL
+    weights=ROOT / "runs/train/exp/weights/best.pt",  # ✅ CORRECT TRAINED MODEL
     source=ROOT / "data/images",
-    data=ROOT / "data/data.yaml",                      # ✅ CORRECT DATASET
+    data=ROOT / "data/data.yaml",  # ✅ CORRECT DATASET
     imgsz=(640, 640),
-    conf_thres=0.05,                                   # ✅ LOWER CONFIDENCE
+    conf_thres=0.05,  # ✅ LOWER CONFIDENCE
     iou_thres=0.45,
     max_det=1000,
     device="",
@@ -72,7 +68,7 @@ def run(
 ):
     source = str(source)
     save_img = not nosave
-    is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
+    Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
     webcam = source.isnumeric()
 
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)
