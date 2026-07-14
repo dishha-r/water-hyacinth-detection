@@ -1,938 +1,1013 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Hyacinth Watch — Detection Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<style>
-/* ── reset & vars ────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:       #0b0f0a;
-  --surface:  #111608;
-  --card:     #161d0f;
-  --border:   #2a3520;
-  --accent:   #7ecb35;
-  --accent2:  #4a8f1c;
-  --accent3:  #c8f06e;
-  --text:     #d6e8c0;
-  --muted:    #6b7d58;
-  --danger:   #e05c3a;
-  --mono:     'DM Mono', monospace;
-  --sans:     'Syne', sans-serif;
-  --radius:   12px;
-}
-
-body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-/* ── noise texture overlay ───────────────────────────────────────────── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.5;
-}
-
-/* ── layout ──────────────────────────────────────────────────────────── */
-.shell {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  min-height: 100vh;
-}
-
-/* ── header ──────────────────────────────────────────────────────────── */
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 36px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(11,15,10,0.8);
-  backdrop-filter: blur(12px);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  background: var(--accent);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-}
-
-.logo-text {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--accent3);
-}
-
-.logo-sub {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--muted);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  font-family: var(--mono);
-}
-
-.header-stats {
-  display: flex;
-  gap: 24px;
-}
-
-.hstat {
-  text-align: right;
-}
-
-.hstat-val {
-  font-family: var(--mono);
-  font-size: 22px;
-  font-weight: 500;
-  color: var(--accent);
-  line-height: 1;
-}
-
-.hstat-label {
-  font-size: 10px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-top: 2px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--muted);
-  display: inline-block;
-  margin-right: 6px;
-  transition: background 0.3s;
-}
-
-.status-dot.live {
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%,100% { opacity:1; }
-  50%      { opacity:0.4; }
-}
-
-/* ── main content ────────────────────────────────────────────────────── */
-main {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  grid-template-rows: auto 1fr;
-  gap: 0;
-  height: calc(100vh - 65px);
-}
-
-/* ── tabs ────────────────────────────────────────────────────────────── */
-.tabs {
-  grid-column: 1;
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--border);
-  padding: 0 28px;
-  background: var(--surface);
-}
-
-.tab {
-  padding: 14px 20px;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  color: var(--muted);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
-  font-family: var(--sans);
-  background: none;
-  border-left: none;
-  border-right: none;
-  border-top: none;
-  user-select: none;
-}
-
-.tab:hover { color: var(--text); }
-
-.tab.active {
-  color: var(--accent3);
-  border-bottom-color: var(--accent);
-}
-
-/* ── workspace ───────────────────────────────────────────────────────── */
-.workspace {
-  grid-column: 1;
-  overflow-y: auto;
-  padding: 28px;
-  background: var(--bg);
-}
-
-/* ── sidebar ──────────────────────────────────────────────────────────── */
-.sidebar {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  border-left: 1px solid var(--border);
-  background: var(--surface);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-section {
-  padding: 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-title {
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-family: var(--mono);
-  margin-bottom: 14px;
-}
-
-/* ── upload panel ────────────────────────────────────────────────────── */
-.upload-zone {
-  border: 1.5px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 40px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: var(--card);
-  position: relative;
-  overflow: hidden;
-}
-
-.upload-zone:hover,
-.upload-zone.dragover {
-  border-color: var(--accent2);
-  background: rgba(126,203,53,0.04);
-}
-
-.upload-zone input[type=file] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.upload-icon {
-  font-size: 36px;
-  margin-bottom: 10px;
-  display: block;
-}
-
-.upload-text {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-
-.upload-text strong {
-  color: var(--accent3);
-  font-weight: 500;
-}
-
-/* ── result area ─────────────────────────────────────────────────────── */
-.result-wrap {
-  position: relative;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.result-wrap img {
-  max-width: 100%;
-  max-height: 60vh;
-  display: block;
-  border-radius: var(--radius);
-}
-
-.result-placeholder {
-  color: var(--muted);
-  font-size: 13px;
-  font-family: var(--mono);
-  text-align: center;
-  padding: 60px 20px;
-}
-
-.result-badge {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(11,15,10,0.85);
-  border: 1px solid var(--accent2);
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--accent3);
-}
-
-/* ── webcam panel ────────────────────────────────────────────────────── */
-#webcam-panel { display: none; }
-
-.webcam-frame {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.webcam-frame img {
-  max-width: 100%;
-  border-radius: var(--radius);
-}
-
-.webcam-placeholder {
-  color: var(--muted);
-  font-size: 13px;
-  font-family: var(--mono);
-  text-align: center;
-  padding: 60px 20px;
-}
-
-/* ── buttons ──────────────────────────────────────────────────────────── */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: all 0.15s;
-  letter-spacing: 0.3px;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: #0b0f0a;
-}
-
-.btn-primary:hover { background: var(--accent3); }
-
-.btn-danger {
-  background: var(--danger);
-  color: #fff;
-}
-
-.btn-danger:hover { opacity: 0.85; }
-
-.btn-ghost {
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--border);
-}
-
-.btn-ghost:hover { color: var(--text); border-color: var(--muted); }
-
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* ── conf slider ──────────────────────────────────────────────────────── */
-.conf-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.conf-label {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--muted);
-  min-width: 110px;
-}
-
-input[type=range] {
-  flex: 1;
-  -webkit-appearance: none;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  outline: none;
-}
-
-input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
-}
-
-.conf-val {
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--accent3);
-  min-width: 36px;
-  text-align: right;
-}
-
-/* ── detection list ───────────────────────────────────────────────────── */
-.det-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.det-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  animation: slideIn 0.2s ease;
-}
-
-@keyframes slideIn {
-  from { opacity:0; transform: translateY(-4px); }
-  to   { opacity:1; transform: translateY(0); }
-}
-
-.det-class {
-  font-size: 13px;
-  color: var(--text);
-  font-weight: 500;
-}
-
-.det-conf {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--accent);
-  background: rgba(126,203,53,0.1);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.empty-state {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-  padding: 16px;
-}
-
-/* ── history feed ─────────────────────────────────────────────────────── */
-.feed-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-  font-family: var(--mono);
-}
-
-.feed-time { color: var(--muted); min-width: 52px; }
-.feed-src  { color: var(--muted); min-width: 48px; }
-.feed-count {
-  color: var(--accent3);
-  background: rgba(126,203,53,0.1);
-  padding: 1px 7px;
-  border-radius: 4px;
-  margin-left: auto;
-}
-.feed-count.zero { color: var(--muted); background: transparent; }
-
-/* ── stat cards ───────────────────────────────────────────────────────── */
-.stat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.stat-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-}
-
-.stat-card-val {
-  font-family: var(--mono);
-  font-size: 26px;
-  font-weight: 500;
-  color: var(--accent3);
-  line-height: 1;
-}
-
-.stat-card-label {
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 4px;
-}
-
-/* ── model info ───────────────────────────────────────────────────────── */
-.model-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(126,203,53,0.08);
-  border: 1px solid var(--accent2);
-  border-radius: 6px;
-  padding: 5px 10px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--accent3);
-}
-
-.class-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 10px;
-}
-
-.class-pill {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--muted);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 7px;
-}
-
-/* ── loading spinner ──────────────────────────────────────────────────── */
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.loading-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(11,15,10,0.75);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  border-radius: var(--radius);
-  z-index: 10;
-  font-size: 12px;
-  font-family: var(--mono);
-  color: var(--muted);
-}
-
-/* ── scrollbar ────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-</style>
-</head>
-<body>
-<div class="shell">
-
-<!-- ── HEADER ──────────────────────────────────────────────────────── -->
-<header>
-  <div class="logo">
-    <div class="logo-icon">🌿</div>
-    <div>
-      <div class="logo-text">Hyacinth Watch</div>
-      <div class="logo-sub">YOLOv5 Detection System</div>
-    </div>
-  </div>
-
-  <div class="header-stats">
-    <div class="hstat">
-      <div class="hstat-val" id="h-total-det">0</div>
-      <div class="hstat-label">Detections</div>
-    </div>
-    <div class="hstat">
-      <div class="hstat-val" id="h-total-img">0</div>
-      <div class="hstat-label">Frames</div>
-    </div>
-    <div class="hstat" style="text-align:right;display:flex;align-items:center;gap:6px">
-      <span class="status-dot" id="status-dot"></span>
-      <span class="hstat-label" id="status-text" style="text-transform:uppercase;letter-spacing:1.5px">Idle</span>
-    </div>
-  </div>
-</header>
-
-<!-- ── MAIN ────────────────────────────────────────────────────────── -->
-<main>
-
-  <!-- tabs row -->
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('upload', this)">Upload Image</button>
-    <button class="tab" onclick="switchTab('webcam', this)">Live Webcam</button>
-  </div>
-
-  <!-- workspace -->
-  <div class="workspace">
-
-    <!-- UPLOAD PANEL -->
-    <div id="upload-panel">
-      <div style="display:flex;flex-direction:column;gap:20px">
-
-        <!-- drop zone -->
-        <div class="upload-zone" id="drop-zone">
-          <input type="file" id="file-input" accept="image/*"/>
-          <span class="upload-icon">🖼️</span>
-          <div class="upload-text">
-            <strong>Drop an image here</strong> or click to browse<br/>
-            <span style="font-size:11px">JPG · PNG · WEBP · BMP</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hyacinth Watch — Detection Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── reset & vars ────────────────────────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0b0f0a;
+        --surface: #111608;
+        --card: #161d0f;
+        --border: #2a3520;
+        --accent: #7ecb35;
+        --accent2: #4a8f1c;
+        --accent3: #c8f06e;
+        --text: #d6e8c0;
+        --muted: #6b7d58;
+        --danger: #e05c3a;
+        --mono: "DM Mono", monospace;
+        --sans: "Syne", sans-serif;
+        --radius: 12px;
+      }
+
+      body {
+        font-family: var(--sans);
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* ── noise texture overlay ───────────────────────────────────────────── */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+        pointer-events: none;
+        z-index: 0;
+        opacity: 0.5;
+      }
+
+      /* ── layout ──────────────────────────────────────────────────────────── */
+      .shell {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        min-height: 100vh;
+      }
+
+      /* ── header ──────────────────────────────────────────────────────────── */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 36px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(11, 15, 10, 0.8);
+        backdrop-filter: blur(12px);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+        background: var(--accent);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+
+      .logo-text {
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: var(--accent3);
+      }
+
+      .logo-sub {
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--muted);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-family: var(--mono);
+      }
+
+      .header-stats {
+        display: flex;
+        gap: 24px;
+      }
+
+      .hstat {
+        text-align: right;
+      }
+
+      .hstat-val {
+        font-family: var(--mono);
+        font-size: 22px;
+        font-weight: 500;
+        color: var(--accent);
+        line-height: 1;
+      }
+
+      .hstat-label {
+        font-size: 10px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-top: 2px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--muted);
+        display: inline-block;
+        margin-right: 6px;
+        transition: background 0.3s;
+      }
+
+      .status-dot.live {
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent);
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      /* ── main content ────────────────────────────────────────────────────── */
+      main {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        grid-template-rows: auto 1fr;
+        gap: 0;
+        height: calc(100vh - 65px);
+      }
+
+      /* ── tabs ────────────────────────────────────────────────────────────── */
+      .tabs {
+        grid-column: 1;
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--border);
+        padding: 0 28px;
+        background: var(--surface);
+      }
+
+      .tab {
+        padding: 14px 20px;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        color: var(--muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        font-family: var(--sans);
+        background: none;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        user-select: none;
+      }
+
+      .tab:hover {
+        color: var(--text);
+      }
+
+      .tab.active {
+        color: var(--accent3);
+        border-bottom-color: var(--accent);
+      }
+
+      /* ── workspace ───────────────────────────────────────────────────────── */
+      .workspace {
+        grid-column: 1;
+        overflow-y: auto;
+        padding: 28px;
+        background: var(--bg);
+      }
+
+      /* ── sidebar ──────────────────────────────────────────────────────────── */
+      .sidebar {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        border-left: 1px solid var(--border);
+        background: var(--surface);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar-section {
+        padding: 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .sidebar-title {
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-family: var(--mono);
+        margin-bottom: 14px;
+      }
+
+      /* ── upload panel ────────────────────────────────────────────────────── */
+      .upload-zone {
+        border: 1.5px dashed var(--border);
+        border-radius: var(--radius);
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--card);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .upload-zone:hover,
+      .upload-zone.dragover {
+        border-color: var(--accent2);
+        background: rgba(126, 203, 53, 0.04);
+      }
+
+      .upload-zone input[type="file"] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      .upload-icon {
+        font-size: 36px;
+        margin-bottom: 10px;
+        display: block;
+      }
+
+      .upload-text {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .upload-text strong {
+        color: var(--accent3);
+        font-weight: 500;
+      }
+
+      /* ── result area ─────────────────────────────────────────────────────── */
+      .result-wrap {
+        position: relative;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .result-wrap img {
+        max-width: 100%;
+        max-height: 60vh;
+        display: block;
+        border-radius: var(--radius);
+      }
+
+      .result-placeholder {
+        color: var(--muted);
+        font-size: 13px;
+        font-family: var(--mono);
+        text-align: center;
+        padding: 60px 20px;
+      }
+
+      .result-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(11, 15, 10, 0.85);
+        border: 1px solid var(--accent2);
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--accent3);
+      }
+
+      /* ── webcam panel ────────────────────────────────────────────────────── */
+      #webcam-panel {
+        display: none;
+      }
+
+      .webcam-frame {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .webcam-frame img {
+        max-width: 100%;
+        border-radius: var(--radius);
+      }
+
+      .webcam-placeholder {
+        color: var(--muted);
+        font-size: 13px;
+        font-family: var(--mono);
+        text-align: center;
+        padding: 60px 20px;
+      }
+
+      /* ── buttons ──────────────────────────────────────────────────────────── */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-family: var(--sans);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+        letter-spacing: 0.3px;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #0b0f0a;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent3);
+      }
+
+      .btn-danger {
+        background: var(--danger);
+        color: #fff;
+      }
+
+      .btn-danger:hover {
+        opacity: 0.85;
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
+
+      .btn-ghost:hover {
+        color: var(--text);
+        border-color: var(--muted);
+      }
+
+      .btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ── conf slider ──────────────────────────────────────────────────────── */
+      .conf-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .conf-label {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        min-width: 110px;
+      }
+
+      input[type="range"] {
+        flex: 1;
+        -webkit-appearance: none;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        outline: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+      }
+
+      .conf-val {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--accent3);
+        min-width: 36px;
+        text-align: right;
+      }
+
+      /* ── detection list ───────────────────────────────────────────────────── */
+      .det-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .det-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 12px;
+        animation: slideIn 0.2s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .det-class {
+        font-size: 13px;
+        color: var(--text);
+        font-weight: 500;
+      }
+
+      .det-conf {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--accent);
+        background: rgba(126, 203, 53, 0.1);
+        padding: 2px 8px;
+        border-radius: 4px;
+      }
+
+      .empty-state {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+        padding: 16px;
+      }
+
+      /* ── history feed ─────────────────────────────────────────────────────── */
+      .feed-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        font-family: var(--mono);
+      }
+
+      .feed-time {
+        color: var(--muted);
+        min-width: 52px;
+      }
+      .feed-src {
+        color: var(--muted);
+        min-width: 48px;
+      }
+      .feed-count {
+        color: var(--accent3);
+        background: rgba(126, 203, 53, 0.1);
+        padding: 1px 7px;
+        border-radius: 4px;
+        margin-left: auto;
+      }
+      .feed-count.zero {
+        color: var(--muted);
+        background: transparent;
+      }
+
+      /* ── stat cards ───────────────────────────────────────────────────────── */
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .stat-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+      }
+
+      .stat-card-val {
+        font-family: var(--mono);
+        font-size: 26px;
+        font-weight: 500;
+        color: var(--accent3);
+        line-height: 1;
+      }
+
+      .stat-card-label {
+        font-size: 10px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      /* ── model info ───────────────────────────────────────────────────────── */
+      .model-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(126, 203, 53, 0.08);
+        border: 1px solid var(--accent2);
+        border-radius: 6px;
+        padding: 5px 10px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent3);
+      }
+
+      .class-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+      }
+
+      .class-pill {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--muted);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 2px 7px;
+      }
+
+      /* ── loading spinner ──────────────────────────────────────────────────── */
+      .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(11, 15, 10, 0.75);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        border-radius: var(--radius);
+        z-index: 10;
+        font-size: 12px;
+        font-family: var(--mono);
+        color: var(--muted);
+      }
+
+      /* ── scrollbar ────────────────────────────────────────────────────────── */
+      ::-webkit-scrollbar {
+        width: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <!-- ── HEADER ──────────────────────────────────────────────────────── -->
+      <header>
+        <div class="logo">
+          <div class="logo-icon">🌿</div>
+          <div>
+            <div class="logo-text">Hyacinth Watch</div>
+            <div class="logo-sub">YOLOv5 Detection System</div>
           </div>
         </div>
 
-        <!-- conf slider -->
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
-          <div class="sidebar-title">Confidence threshold</div>
-          <div class="conf-row">
-            <span class="conf-label">Min. confidence</span>
-            <input type="range" id="conf-slider" min="1" max="99" value="5" oninput="updateConf(this.value)"/>
-            <span class="conf-val" id="conf-display">0.05</span>
+        <div class="header-stats">
+          <div class="hstat">
+            <div class="hstat-val" id="h-total-det">0</div>
+            <div class="hstat-label">Detections</div>
+          </div>
+          <div class="hstat">
+            <div class="hstat-val" id="h-total-img">0</div>
+            <div class="hstat-label">Frames</div>
+          </div>
+          <div class="hstat" style="text-align: right; display: flex; align-items: center; gap: 6px">
+            <span class="status-dot" id="status-dot"></span>
+            <span class="hstat-label" id="status-text" style="text-transform: uppercase; letter-spacing: 1.5px"
+              >Idle</span
+            >
           </div>
         </div>
+      </header>
 
-        <!-- result -->
-        <div class="result-wrap" id="result-wrap">
-          <div class="result-placeholder" id="result-placeholder">
-            📷 Upload an image to run detection
+      <!-- ── MAIN ────────────────────────────────────────────────────────── -->
+      <main>
+        <!-- tabs row -->
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('upload', this)">Upload Image</button>
+          <button class="tab" onclick="switchTab('webcam', this)">Live Webcam</button>
+        </div>
+
+        <!-- workspace -->
+        <div class="workspace">
+          <!-- UPLOAD PANEL -->
+          <div id="upload-panel">
+            <div style="display: flex; flex-direction: column; gap: 20px">
+              <!-- drop zone -->
+              <div class="upload-zone" id="drop-zone">
+                <input type="file" id="file-input" accept="image/*" />
+                <span class="upload-icon">🖼️</span>
+                <div class="upload-text">
+                  <strong>Drop an image here</strong> or click to browse<br />
+                  <span style="font-size: 11px">JPG · PNG · WEBP · BMP</span>
+                </div>
+              </div>
+
+              <!-- conf slider -->
+              <div
+                style="
+                  background: var(--card);
+                  border: 1px solid var(--border);
+                  border-radius: var(--radius);
+                  padding: 16px;
+                "
+              >
+                <div class="sidebar-title">Confidence threshold</div>
+                <div class="conf-row">
+                  <span class="conf-label">Min. confidence</span>
+                  <input type="range" id="conf-slider" min="1" max="99" value="5" oninput="updateConf(this.value)" />
+                  <span class="conf-val" id="conf-display">0.05</span>
+                </div>
+              </div>
+
+              <!-- result -->
+              <div class="result-wrap" id="result-wrap">
+                <div class="result-placeholder" id="result-placeholder">📷 Upload an image to run detection</div>
+                <img id="result-img" style="display: none" />
+                <div class="result-badge" id="result-badge" style="display: none"></div>
+              </div>
+            </div>
           </div>
-          <img id="result-img" style="display:none"/>
-          <div class="result-badge" id="result-badge" style="display:none"></div>
-        </div>
 
-      </div>
-    </div>
+          <!-- WEBCAM PANEL -->
+          <div id="webcam-panel">
+            <div style="display: flex; flex-direction: column; gap: 20px">
+              <div style="display: flex; gap: 10px; align-items: center">
+                <button class="btn btn-primary" id="start-btn" onclick="startWebcam()">▶ Start Camera</button>
+                <button class="btn btn-danger" id="stop-btn" onclick="stopWebcam()" disabled>■ Stop</button>
+                <div style="margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--muted)">
+                  <span class="status-dot" id="cam-dot"></span>
+                  <span id="cam-status">Camera off</span>
+                </div>
+              </div>
 
-    <!-- WEBCAM PANEL -->
-    <div id="webcam-panel">
-      <div style="display:flex;flex-direction:column;gap:20px">
+              <!-- webcam conf -->
+              <div
+                style="
+                  background: var(--card);
+                  border: 1px solid var(--border);
+                  border-radius: var(--radius);
+                  padding: 16px;
+                "
+              >
+                <div class="sidebar-title">Confidence threshold</div>
+                <div class="conf-row">
+                  <span class="conf-label">Min. confidence</span>
+                  <input
+                    type="range"
+                    id="cam-conf-slider"
+                    min="1"
+                    max="99"
+                    value="5"
+                    oninput="updateCamConf(this.value)"
+                  />
+                  <span class="conf-val" id="cam-conf-display">0.05</span>
+                </div>
+              </div>
 
-        <div style="display:flex;gap:10px;align-items:center">
-          <button class="btn btn-primary" id="start-btn" onclick="startWebcam()">
-            ▶ Start Camera
-          </button>
-          <button class="btn btn-danger" id="stop-btn" onclick="stopWebcam()" disabled>
-            ■ Stop
-          </button>
-          <div style="margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted)">
-            <span class="status-dot" id="cam-dot"></span>
-            <span id="cam-status">Camera off</span>
+              <div class="webcam-frame" id="webcam-frame">
+                <div class="webcam-placeholder" id="webcam-placeholder">
+                  📹 Click "Start Camera" to begin live detection
+                </div>
+                <img id="webcam-img" style="display: none; max-width: 100%; border-radius: var(--radius)" />
+              </div>
+            </div>
           </div>
         </div>
+        <!-- /workspace -->
 
-        <!-- webcam conf -->
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
-          <div class="sidebar-title">Confidence threshold</div>
-          <div class="conf-row">
-            <span class="conf-label">Min. confidence</span>
-            <input type="range" id="cam-conf-slider" min="1" max="99" value="5" oninput="updateCamConf(this.value)"/>
-            <span class="conf-val" id="cam-conf-display">0.05</span>
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+          <!-- model info -->
+          <div class="sidebar-section">
+            <div class="sidebar-title">Model</div>
+            <div class="model-chip"><span>●</span> best.pt · YOLOv5</div>
+            <div class="class-pills" id="class-pills">
+              {% for name in model_classes %}
+              <span class="class-pill">{{ name }}</span>
+              {% endfor %}
+            </div>
           </div>
-        </div>
 
-        <div class="webcam-frame" id="webcam-frame">
-          <div class="webcam-placeholder" id="webcam-placeholder">
-            📹 Click "Start Camera" to begin live detection
+          <!-- stats -->
+          <div class="sidebar-section">
+            <div class="sidebar-title">Session stats</div>
+            <div class="stat-grid">
+              <div class="stat-card">
+                <div class="stat-card-val" id="s-detections">0</div>
+                <div class="stat-card-label">Detections</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-card-val" id="s-frames">0</div>
+                <div class="stat-card-label">Frames</div>
+              </div>
+            </div>
           </div>
-          <img id="webcam-img" style="display:none;max-width:100%;border-radius:var(--radius)"/>
-        </div>
 
-      </div>
+          <!-- detections list (current) -->
+          <div class="sidebar-section">
+            <div class="sidebar-title">Current detections</div>
+            <div class="det-list" id="det-list">
+              <div class="empty-state">No detections yet</div>
+            </div>
+          </div>
+
+          <!-- history feed -->
+          <div class="sidebar-section" style="flex: 1">
+            <div class="sidebar-title">Detection log</div>
+            <div id="feed-list">
+              <div class="empty-state">Log empty</div>
+            </div>
+          </div>
+        </aside>
+      </main>
     </div>
 
-  </div><!-- /workspace -->
+    <script>
+      // ── state ──────────────────────────────────────────────────────────────
+      let confVal = 0.05;
+      let camConf = 0.05;
+      let webcamOn = false;
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
+      // ── tabs ───────────────────────────────────────────────────────────────
+      function switchTab(name, el) {
+        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+        el.classList.add("active");
+        document.getElementById("upload-panel").style.display = name === "upload" ? "block" : "none";
+        document.getElementById("webcam-panel").style.display = name === "webcam" ? "block" : "none";
+        if (name !== "webcam" && webcamOn) stopWebcam();
+      }
 
-    <!-- model info -->
-    <div class="sidebar-section">
-      <div class="sidebar-title">Model</div>
-      <div class="model-chip">
-        <span>●</span> best.pt · YOLOv5
-      </div>
-      <div class="class-pills" id="class-pills">
-        {% for name in model_classes %}
-        <span class="class-pill">{{ name }}</span>
-        {% endfor %}
-      </div>
-    </div>
+      // ── conf sliders ───────────────────────────────────────────────────────
+      function updateConf(v) {
+        confVal = v / 100;
+        document.getElementById("conf-display").textContent = confVal.toFixed(2);
+      }
 
-    <!-- stats -->
-    <div class="sidebar-section">
-      <div class="sidebar-title">Session stats</div>
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-card-val" id="s-detections">0</div>
-          <div class="stat-card-label">Detections</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-val" id="s-frames">0</div>
-          <div class="stat-card-label">Frames</div>
-        </div>
-      </div>
-    </div>
+      function updateCamConf(v) {
+        camConf = v / 100;
+        document.getElementById("cam-conf-display").textContent = camConf.toFixed(2);
+      }
 
-    <!-- detections list (current) -->
-    <div class="sidebar-section">
-      <div class="sidebar-title">Current detections</div>
-      <div class="det-list" id="det-list">
-        <div class="empty-state">No detections yet</div>
-      </div>
-    </div>
+      // ── file upload + drag/drop ────────────────────────────────────────────
+      const fileInput = document.getElementById("file-input");
+      const dropZone = document.getElementById("drop-zone");
 
-    <!-- history feed -->
-    <div class="sidebar-section" style="flex:1">
-      <div class="sidebar-title">Detection log</div>
-      <div id="feed-list">
-        <div class="empty-state">Log empty</div>
-      </div>
-    </div>
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files[0]) runDetect(e.target.files[0]);
+      });
 
-  </aside>
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+      });
 
-</main>
-</div>
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
 
-<script>
-// ── state ──────────────────────────────────────────────────────────────
-let confVal    = 0.05;
-let camConf    = 0.05;
-let webcamOn   = false;
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith("image/")) runDetect(file);
+      });
 
-// ── tabs ───────────────────────────────────────────────────────────────
-function switchTab(name, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('upload-panel').style.display = name === 'upload' ? 'block' : 'none';
-  document.getElementById('webcam-panel').style.display = name === 'webcam' ? 'block' : 'none';
-  if (name !== 'webcam' && webcamOn) stopWebcam();
-}
+      // ── run detection ──────────────────────────────────────────────────────
+      async function runDetect(file) {
+        const wrap = document.getElementById("result-wrap");
+        const img = document.getElementById("result-img");
+        const badge = document.getElementById("result-badge");
+        const ph = document.getElementById("result-placeholder");
 
-// ── conf sliders ───────────────────────────────────────────────────────
-function updateConf(v) {
-  confVal = v / 100;
-  document.getElementById('conf-display').textContent = confVal.toFixed(2);
-}
+        // show spinner
+        ph.style.display = "none";
+        img.style.display = "none";
+        badge.style.display = "none";
 
-function updateCamConf(v) {
-  camConf = v / 100;
-  document.getElementById('cam-conf-display').textContent = camConf.toFixed(2);
-}
+        let overlay = document.createElement("div");
+        overlay.className = "loading-overlay";
+        overlay.innerHTML = '<div class="spinner"></div><span>Running inference…</span>';
+        wrap.appendChild(overlay);
 
-// ── file upload + drag/drop ────────────────────────────────────────────
-const fileInput = document.getElementById('file-input');
-const dropZone  = document.getElementById('drop-zone');
+        setStatus("running");
 
-fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) runDetect(e.target.files[0]);
-});
+        const fd = new FormData();
+        fd.append("image", file);
+        fd.append("conf", confVal);
 
-dropZone.addEventListener('dragover', e => {
-  e.preventDefault();
-  dropZone.classList.add('dragover');
-});
+        try {
+          const res = await fetch("/detect", { method: "POST", body: fd });
+          const data = await res.json();
 
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+          overlay.remove();
 
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) runDetect(file);
-});
+          img.src = "data:image/jpeg;base64," + data.image;
+          img.style.display = "block";
+          badge.textContent = data.count + " detection" + (data.count !== 1 ? "s" : "");
+          badge.style.display = "block";
 
-// ── run detection ──────────────────────────────────────────────────────
-async function runDetect(file) {
-  const wrap   = document.getElementById('result-wrap');
-  const img    = document.getElementById('result-img');
-  const badge  = document.getElementById('result-badge');
-  const ph     = document.getElementById('result-placeholder');
+          renderDetList(data.detections);
+          await refreshStats();
+        } catch (err) {
+          overlay.remove();
+          ph.style.display = "block";
+          ph.textContent = "⚠ Error: " + err.message;
+        }
 
-  // show spinner
-  ph.style.display = 'none';
-  img.style.display = 'none';
-  badge.style.display = 'none';
+        setStatus("idle");
+      }
 
-  let overlay = document.createElement('div');
-  overlay.className = 'loading-overlay';
-  overlay.innerHTML = '<div class="spinner"></div><span>Running inference…</span>';
-  wrap.appendChild(overlay);
+      // ── webcam ─────────────────────────────────────────────────────────────
+      function startWebcam() {
+        webcamOn = true;
+        document.getElementById("webcam-placeholder").style.display = "none";
+        document.getElementById("webcam-img").style.display = "block";
+        document.getElementById("webcam-img").src = `/webcam_feed?conf=${camConf}&t=${Date.now()}`;
+        document.getElementById("start-btn").disabled = true;
+        document.getElementById("stop-btn").disabled = false;
+        document.getElementById("cam-dot").classList.add("live");
+        document.getElementById("cam-status").textContent = "Live";
+        setStatus("live");
+        startFeedPoll();
+      }
 
-  setStatus('running');
+      async function stopWebcam() {
+        webcamOn = false;
+        await fetch("/webcam_stop", { method: "POST" });
+        document.getElementById("webcam-img").src = "";
+        document.getElementById("webcam-img").style.display = "none";
+        document.getElementById("webcam-placeholder").style.display = "block";
+        document.getElementById("start-btn").disabled = false;
+        document.getElementById("stop-btn").disabled = true;
+        document.getElementById("cam-dot").classList.remove("live");
+        document.getElementById("cam-status").textContent = "Camera off";
+        setStatus("idle");
+      }
 
-  const fd = new FormData();
-  fd.append('image', file);
-  fd.append('conf', confVal);
-
-  try {
-    const res  = await fetch('/detect', { method: 'POST', body: fd });
-    const data = await res.json();
-
-    overlay.remove();
-
-    img.src = 'data:image/jpeg;base64,' + data.image;
-    img.style.display = 'block';
-    badge.textContent = data.count + ' detection' + (data.count !== 1 ? 's' : '');
-    badge.style.display = 'block';
-
-    renderDetList(data.detections);
-    await refreshStats();
-
-  } catch(err) {
-    overlay.remove();
-    ph.style.display = 'block';
-    ph.textContent = '⚠ Error: ' + err.message;
-  }
-
-  setStatus('idle');
-}
-
-// ── webcam ─────────────────────────────────────────────────────────────
-function startWebcam() {
-  webcamOn = true;
-  document.getElementById('webcam-placeholder').style.display = 'none';
-  document.getElementById('webcam-img').style.display = 'block';
-  document.getElementById('webcam-img').src = `/webcam_feed?conf=${camConf}&t=${Date.now()}`;
-  document.getElementById('start-btn').disabled = true;
-  document.getElementById('stop-btn').disabled  = false;
-  document.getElementById('cam-dot').classList.add('live');
-  document.getElementById('cam-status').textContent = 'Live';
-  setStatus('live');
-  startFeedPoll();
-}
-
-async function stopWebcam() {
-  webcamOn = false;
-  await fetch('/webcam_stop', { method: 'POST' });
-  document.getElementById('webcam-img').src = '';
-  document.getElementById('webcam-img').style.display = 'none';
-  document.getElementById('webcam-placeholder').style.display = 'block';
-  document.getElementById('start-btn').disabled = false;
-  document.getElementById('stop-btn').disabled  = true;
-  document.getElementById('cam-dot').classList.remove('live');
-  document.getElementById('cam-status').textContent = 'Camera off';
-  setStatus('idle');
-}
-
-// ── detection list ─────────────────────────────────────────────────────
-function renderDetList(dets) {
-  const list = document.getElementById('det-list');
-  if (!dets || dets.length === 0) {
-    list.innerHTML = '<div class="empty-state">No objects detected</div>';
-    return;
-  }
-  list.innerHTML = dets.map(d => `
+      // ── detection list ─────────────────────────────────────────────────────
+      function renderDetList(dets) {
+        const list = document.getElementById("det-list");
+        if (!dets || dets.length === 0) {
+          list.innerHTML = '<div class="empty-state">No objects detected</div>';
+          return;
+        }
+        list.innerHTML = dets
+          .map(
+            (d) => `
     <div class="det-item">
       <span class="det-class">${d.class}</span>
       <span class="det-conf">${(d.confidence * 100).toFixed(1)}%</span>
     </div>
-  `).join('');
-}
+  `,
+          )
+          .join("");
+      }
 
-// ── stats refresh ──────────────────────────────────────────────────────
-async function refreshStats() {
-  try {
-    const res  = await fetch('/stats');
-    const data = await res.json();
+      // ── stats refresh ──────────────────────────────────────────────────────
+      async function refreshStats() {
+        try {
+          const res = await fetch("/stats");
+          const data = await res.json();
 
-    document.getElementById('h-total-det').textContent = data.total_detections;
-    document.getElementById('h-total-img').textContent = data.total_images;
-    document.getElementById('s-detections').textContent = data.total_detections;
-    document.getElementById('s-frames').textContent     = data.total_images;
+          document.getElementById("h-total-det").textContent = data.total_detections;
+          document.getElementById("h-total-img").textContent = data.total_images;
+          document.getElementById("s-detections").textContent = data.total_detections;
+          document.getElementById("s-frames").textContent = data.total_images;
 
-    const feed = document.getElementById('feed-list');
-    const hist = [...(data.history || [])].reverse().slice(0, 20);
-    if (hist.length === 0) {
-      feed.innerHTML = '<div class="empty-state">Log empty</div>';
-    } else {
-      feed.innerHTML = hist.map(h => `
+          const feed = document.getElementById("feed-list");
+          const hist = [...(data.history || [])].reverse().slice(0, 20);
+          if (hist.length === 0) {
+            feed.innerHTML = '<div class="empty-state">Log empty</div>';
+          } else {
+            feed.innerHTML = hist
+              .map(
+                (h) => `
         <div class="feed-item">
           <span class="feed-time">${h.time}</span>
           <span class="feed-src">${h.source}</span>
-          <span class="feed-count ${h.count === 0 ? 'zero' : ''}">${h.count}</span>
+          <span class="feed-count ${h.count === 0 ? "zero" : ""}">${h.count}</span>
         </div>
-      `).join('');
-    }
-  } catch(_) {}
-}
+      `,
+              )
+              .join("");
+          }
+        } catch (_) {}
+      }
 
-// ── feed polling (webcam) ──────────────────────────────────────────────
-let pollInterval = null;
+      // ── feed polling (webcam) ──────────────────────────────────────────────
+      let pollInterval = null;
 
-function startFeedPoll() {
-  if (pollInterval) clearInterval(pollInterval);
-  pollInterval = setInterval(async () => {
-    if (!webcamOn) { clearInterval(pollInterval); return; }
-    await refreshStats();
-  }, 1500);
-}
+      function startFeedPoll() {
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(async () => {
+          if (!webcamOn) {
+            clearInterval(pollInterval);
+            return;
+          }
+          await refreshStats();
+        }, 1500);
+      }
 
-// ── status indicator ───────────────────────────────────────────────────
-function setStatus(state) {
-  const dot  = document.getElementById('status-dot');
-  const text = document.getElementById('status-text');
-  dot.className  = 'status-dot';
-  if (state === 'running') { dot.classList.add('live'); text.textContent = 'Processing'; }
-  else if (state === 'live') { dot.classList.add('live'); text.textContent = 'Live'; }
-  else { text.textContent = 'Idle'; }
-}
+      // ── status indicator ───────────────────────────────────────────────────
+      function setStatus(state) {
+        const dot = document.getElementById("status-dot");
+        const text = document.getElementById("status-text");
+        dot.className = "status-dot";
+        if (state === "running") {
+          dot.classList.add("live");
+          text.textContent = "Processing";
+        } else if (state === "live") {
+          dot.classList.add("live");
+          text.textContent = "Live";
+        } else {
+          text.textContent = "Idle";
+        }
+      }
 
-// ── init ───────────────────────────────────────────────────────────────
-document.getElementById('upload-panel').style.display = 'block';
-document.getElementById('webcam-panel').style.display = 'none';
-refreshStats();
-</script>
-</body>
+      // ── init ───────────────────────────────────────────────────────────────
+      document.getElementById("upload-panel").style.display = "block";
+      document.getElementById("webcam-panel").style.display = "none";
+      refreshStats();
+    </script>
+  </body>
 </html>
